@@ -12,6 +12,7 @@ from ssl import SSLContext, PROTOCOL_TLSv1, PROTOCOL_TLSv1_2
 import argparse
 import sys
 import itertools
+import time
 
 # Cassandra related libs
 from cassandra.cluster import Cluster, Session, ExecutionProfile, EXEC_PROFILE_DEFAULT, ConsistencyLevel
@@ -176,18 +177,33 @@ def execute_select(keyspace,
     """
 
     sql_template="SELECT * FROM {}.{} WHERE userhash=%s".format(keyspace, table)
-    
-    result_list = []
+
+
+# TODO This seems to be a better approach but I couldn't figure out how to print data retrieved from the query with trace messages. It would be usefull to track what trace messages belong to which query.
+#    result_list = []
+#
+#    for u in primary_keys:
+#        result_list.append(session.execute_async(sql_template, [u], trace=True))
+#    
+#    for item in result_list:
+#        rows = item.result()
+#        trace = item.get_query_trace()
+#        for e in trace.events:
+#            print(e.source_elapsed, e.description)
 
     for u in primary_keys:
-        result_list.append(session.execute_async(sql_template, [u], trace=True))
-    
-    for item in result_list:
-        rows = item.result()
-        trace = item.get_query_trace()
-        for e in trace.events:
-            print(e.source_elapsed, e.description)
-
+        try:
+            result_list = []
+            result_list.append(session.execute_async(sql_template, [u], trace=True))
+            for item in result_list:
+                rows = item.result()
+                trace = item.get_query_trace()
+                for e in trace.events:
+                    print(u, e.source_elapsed, e.description)
+                result_list = []
+        except Exception as x:
+            print("Exception when reading {}, exception message: {}".format(u, x.args[0]))
+            sys.exit(1)
 
 def chunked_iterable(iterable, size):
     """Generator object that chunks lists into smaller lists
