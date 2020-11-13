@@ -11,6 +11,7 @@
 from ssl import SSLContext, PROTOCOL_TLSv1, PROTOCOL_TLSv1_2
 import argparse
 import sys
+import itertools
 
 # Cassandra related libs
 from cassandra.cluster import Cluster, Session, ExecutionProfile, EXEC_PROFILE_DEFAULT, ConsistencyLevel
@@ -37,6 +38,7 @@ class AppSettings:
         self.pr_keys = None
         self.keyspace = None
         self.table = None
+        self.chunk_size = None
 
 class PrimaryKeys:
     def __init__(self):
@@ -99,6 +101,11 @@ def parse_user_args():
                         dest="pr_keys",
                         type=str,
                         help="A file with a list of primary keys separated by new line")
+    parser.add_argument("--chunk-size",
+                        type=int,
+                        default=10,
+                        dest="chunk_size",
+                        help="Size of a chunk passed to async select")
     args = parser.parse_args()
     return args
 
@@ -175,7 +182,26 @@ def execute_select(keyspace,
         trace = item.get_query_trace()
         for e in trace.events:
             print(e.source_elapsed, e.description)
-    
+
+
+def chunked_iterable(iterable, size):
+    """Generator object that chunks lists into smaller lists
+
+    :param iterable: Initial list to be chunked
+    :type iterable: iterable object, list
+    :param size: Amount of items in a chunk
+    :type size: int
+    :yield: A smaller list 
+    :rtype: list of tuples
+    """
+    it = iter(iterable)
+    while True:
+        chunk = tuple(itertools.islice(it, size))
+        if not chunk:
+            break
+        print(chunk)
+        yield chunk
+
 
 if __name__ == "__main__":
 
@@ -202,6 +228,7 @@ if __name__ == "__main__":
     app_settings.pr_keys = args.pr_keys
     app_settings.keyspace = args.keyspace
     app_settings.table = args.table
+    app_settings.chunk_size = args.chunk_size
 
     # Instantiate a list of primary keys
     primary_keys = PrimaryKeys.pr_key_list_creator(app_settings.pr_keys)
@@ -209,5 +236,6 @@ if __name__ == "__main__":
     # Login to the db and get the session object
     runtime_session = get_cassandra_session(cas_settings.host, cas_settings.port, cas_settings.user,  cas_settings.password, cas_settings.ssl_cert, cas_settings.ssl_key, cas_settings.ssl_version)
 
-    # Execut the tracing select query
-    execute_select(app_settings.keyspace, app_settings.table, primary_keys, runtime_session)
+    # Execute the tracing select query
+    for i in chunked_iterable(primary_keys, app_settings.chunk_size):
+        execute_select(app_settings.keyspace, app_settings.table, i, runtime_session)
