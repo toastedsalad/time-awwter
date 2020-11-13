@@ -16,6 +16,7 @@ import itertools
 # Cassandra related libs
 from cassandra.cluster import Cluster, Session, ExecutionProfile, EXEC_PROFILE_DEFAULT, ConsistencyLevel
 from cassandra.auth import PlainTextAuthProvider
+from cassandra.policies import DCAwareRoundRobinPolicy
 
 # Settings
 import settings
@@ -145,7 +146,8 @@ def get_cassandra_session(host,
         }
 
     profile = ExecutionProfile(
-        consistency_level=ConsistencyLevel.LOCAL_ONE
+        consistency_level=ConsistencyLevel.LOCAL_ONE,
+        load_balancing_policy=DCAwareRoundRobinPolicy
         )
 
     cluster = Cluster([host], port=port, ssl_options=ssl_options, auth_provider=auth_provider, execution_profiles={EXEC_PROFILE_DEFAULT: profile})
@@ -153,7 +155,8 @@ def get_cassandra_session(host,
     session = cluster.connect()
     return session
 
-
+# TODO uhash is harcoded, need to make it a var
+# TODO DC round robin policy
 def execute_select(keyspace,
                     table,
                     primary_keys,
