@@ -16,7 +16,7 @@ import itertools
 # Cassandra related libs
 from cassandra.cluster import Cluster, Session, ExecutionProfile, EXEC_PROFILE_DEFAULT, ConsistencyLevel
 from cassandra.auth import PlainTextAuthProvider
-from cassandra.policies import DCAwareRoundRobinPolicy
+from cassandra.policies import RoundRobinPolicy
 
 # Settings
 import settings
@@ -145,9 +145,11 @@ def get_cassandra_session(host,
         'ssl_version': PROTOCOL_TLSv1_2
         }
 
+    policy = RoundRobinPolicy()
+
     profile = ExecutionProfile(
         consistency_level=ConsistencyLevel.LOCAL_ONE,
-        load_balancing_policy=DCAwareRoundRobinPolicy
+        load_balancing_policy=policy
         )
 
     cluster = Cluster([host], port=port, ssl_options=ssl_options, auth_provider=auth_provider, execution_profiles={EXEC_PROFILE_DEFAULT: profile})
