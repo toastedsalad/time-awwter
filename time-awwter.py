@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # Execute like so:
-# python3 time-awwter.py <keyspace> <table> <host> --user dba --ssl-certificate <path_to_file> --ssl-key <path_to_file> --pr-key-list <path_to_file>
+# python3 time-awwter.py <host> <keyspace> <table> --user dba --ssl-certificate <path_to_file> --ssl-key <path_to_file> --pr-key-list <path_to_file>
 # This script will iterate through a list of primary keys and print tracing messages for each request. The list specified with --pr-key-list is a new line separated list of primary keys.
 
 # A lot of things were plagiarized from cassandra-trireme project https://github.com/fxlv/cassandra-trireme.git
@@ -127,7 +127,7 @@ def get_cassandra_session(host,
     :param ssl_version: Version of the SSL environment used for the connection
     :type ssl_version: str
     :return: The function returns an instance for the cassandra session
-    :rtype: instance
+    :rtype: object
     """
     auth_provider = PlainTextAuthProvider(username=user, password=password)
 
@@ -160,7 +160,7 @@ def execute_select(keyspace,
     :param primary_keys: List of primary keys
     :type primary_keys: instance
     :param session: Cassandra session
-    :type session: instance
+    :type session: object
     """
 
     sql_template="SELECT * FROM {}.{} WHERE userhash=%s".format(keyspace, table)
